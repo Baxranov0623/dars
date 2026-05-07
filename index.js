@@ -1,21 +1,17 @@
 const express = require('express');
 const { Pool } = require('pg');
-const cors = require('cors'); // 1. Birinchi importlar
-import dotenv from 'dotenv';
-dotenv.config();
+const cors = require('cors');
+require('dotenv').config(); // import o'rniga shunday yoziladi
 
-const app = express(); // 2. KEYIN app ni yaratamiz
+const app = express();
 
-app.use(cors()); // 3. ENDI cors ni ishlatsak bo'ladi
-app.use(express.json()); // JSON o'qish uchun
+app.use(cors());
+app.use(express.json());
 
-// Baza bilan bog'lanish
+// Baza bilan bog'lanish - Render uchun eng to'g'ri variant
 const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD, // Parol joyida, super!
-  port:process.env.DB_PORT,
+  connectionString: process.env.DATABASE_URL, // .env dagi uzun linkni oladi
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
 // GET so'rovi
@@ -32,6 +28,8 @@ app.get('/users', async (req, res) => {
 // POST so'rovi
 app.post('/users', async (req, res) => {
   const { name } = req.body;
+  if (!name) return res.status(400).json({ error: "Name kiritilmadi" });
+
   try {
     const newUser = await pool.query(
       'INSERT INTO users (name) VALUES ($1) RETURNING *',
@@ -44,6 +42,8 @@ app.post('/users', async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log('Server 3000-portda yondi: http://localhost:3000');
+// Portni Render beradigan o'zgaruvchiga bog'laymiz
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server ${PORT}-portda ishlamoqda...`);
 });
